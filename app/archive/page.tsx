@@ -1,0 +1,6 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { articles, topics } from "@/data/content";
+import { formatDate, topicName } from "@/lib/content";
+export const metadata: Metadata = { title: "Intelligence archive", description: "Browse all BuilderSignal intelligence, deep dives and tutorials." };
+export default function ArchivePage() { return <><section className="pageHero"><div className="shell"><span className="eyebrow">Intelligence archive</span><h1>Every signal, in one place.</h1><p>Browse builder-focused analysis across agents, protocols, RAG, context, open models and production infrastructure.</p><div className="filterRow">{topics.map((topic) => <Link className="filterChip" href={`/topics/${topic.slug}`} key={topic.slug}>{topic.name}</Link>)}</div></div></section><section className="section" style={{paddingTop:20}}><div className="shell archiveList">{articles.map((article) => <Link href={`/articles/${article.slug}`} className="archiveRow" key={article.slug}><div className="archiveDate">{formatDate(article.publishedAt)}<br/>{article.readTime} min</div><div><h2>{article.title}</h2><p>{article.dek}</p></div><div className="archiveTopic"><span className="pill">{article.category}</span><div style={{marginTop:8}}>{topicName(article.topic)}</div></div></Link>)}</div></section></> }

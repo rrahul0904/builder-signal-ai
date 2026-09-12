@@ -1,20 +1,16 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { listSponsorLeads } from "@/lib/leads";
-import { listSubscribers } from "@/lib/subscribers";
-
-function authorized(request: Request) {
-  const expected = process.env.ADMIN_API_TOKEN;
-  if (!expected) return false;
-  const supplied = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
-  const expectedBuffer = Buffer.from(expected);
-  const suppliedBuffer = Buffer.from(supplied);
-  return expectedBuffer.length === suppliedBuffer.length && timingSafeEqual(expectedBuffer, suppliedBuffer);
-}
+import { adminExport } from "@/lib/data-api";
 
 export async function GET(request: Request) {
-  if (!process.env.ADMIN_API_TOKEN) return NextResponse.json({ error: "Admin export is not configured." }, { status: 503 });
-  if (!authorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const [subscribers, sponsorLeads] = await Promise.all([listSubscribers(), listSponsorLeads()]);
-  return NextResponse.json({ exportedAt: new Date().toISOString(), subscribers, sponsorLeads });
+  const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
+  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    return NextResponse.json(await adminExport(token));
+  } catch (error) {
+    const status = typeof error === "object" && error && "status" in error ? Number(error.status) : 500;
+    if (status === 401) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    console.error("admin_export_failed", error);
+    return NextResponse.json({ error: "Admin export is unavailable." }, { status: 503 });
+  }
 }

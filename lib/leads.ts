@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import postgres from "postgres";
+import { dataApiUrl } from "./data-api";
 
 export type SponsorLead = {
   name: string;
@@ -12,15 +12,16 @@ export type SponsorLead = {
 
 export async function addSponsorLead(input: Omit<SponsorLead, "createdAt">) {
   const lead = { ...input, email: input.email.trim().toLowerCase() };
-  const databaseUrl = process.env.DATABASE_URL;
-  if (databaseUrl) {
-    const sql = postgres(databaseUrl, { max: 1, prepare: false });
-    try {
-      await sql`insert into sponsor_leads (name, email, company, message) values (${lead.name}, ${lead.email}, ${lead.company}, ${lead.message})`;
-      return { persisted: "postgres" as const };
-    } finally {
-      await sql.end();
-    }
+  const baseUrl = dataApiUrl();
+  if (baseUrl) {
+    const response = await fetch(`${baseUrl}/sponsor_leads`, {
+      method: "POST",
+      headers: { "content-type": "application/json", prefer: "return=minimal" },
+      body: JSON.stringify(lead),
+      cache: "no-store",
+    });
+    if (!response.ok) throw new Error(`Sponsor lead persistence failed with status ${response.status}`);
+    return { persisted: "neon-data-api" as const };
   }
 
   const dir = path.join(process.cwd(), ".data");
@@ -34,16 +35,6 @@ export async function addSponsorLead(input: Omit<SponsorLead, "createdAt">) {
 }
 
 export async function listSponsorLeads(): Promise<SponsorLead[]> {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (databaseUrl) {
-    const sql = postgres(databaseUrl, { max: 1, prepare: false });
-    try {
-      const rows = await sql<SponsorLead[]>`select name, email, company, message, created_at as "createdAt" from sponsor_leads order by created_at desc`;
-      return rows;
-    } finally {
-      await sql.end();
-    }
-  }
   try {
     return JSON.parse(await fs.readFile(path.join(process.cwd(), ".data", "sponsor-leads.json"), "utf8"));
   } catch {

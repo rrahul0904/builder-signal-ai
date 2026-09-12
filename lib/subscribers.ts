@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import postgres from "postgres";
+import { dataApiUrl } from "./data-api";
 
 export type Subscriber = { email: string; source: string; createdAt: string };
 
@@ -8,15 +8,17 @@ function normalize(email: string) { return email.trim().toLowerCase(); }
 
 export async function addSubscriber(email: string, source = "site") {
   const normalized = normalize(email);
-  const databaseUrl = process.env.DATABASE_URL;
-  if (databaseUrl) {
-    const sql = postgres(databaseUrl, { max: 1, prepare: false });
-    try {
-      await sql`insert into subscribers (email, source) values (${normalized}, ${source}) on conflict (email) do update set source = excluded.source`;
-      return { persisted: "postgres" as const };
-    } finally {
-      await sql.end();
-    }
+  const baseUrl = dataApiUrl();
+  if (baseUrl) {
+    const response = await fetch(`${baseUrl}/subscribers`, {
+      method: "POST",
+      headers: { "content-type": "application/json", prefer: "return=minimal" },
+      body: JSON.stringify({ email: normalized, source }),
+      cache: "no-store",
+    });
+    if (response.status === 409) return { persisted: "neon-data-api" as const, duplicate: true };
+    if (!response.ok) throw new Error(`Subscriber persistence failed with status ${response.status}`);
+    return { persisted: "neon-data-api" as const, duplicate: false };
   }
 
   const dir = path.join(process.cwd(), ".data");
@@ -29,20 +31,10 @@ export async function addSubscriber(email: string, source = "site") {
     subscribers.push({ email: normalized, source, createdAt: new Date().toISOString() });
     await fs.writeFile(file, JSON.stringify(subscribers, null, 2), "utf8");
   }
-  return { persisted: "file" as const };
+  return { persisted: "file" as const, duplicate: Boolean(existing) };
 }
 
 export async function listSubscribers(): Promise<Subscriber[]> {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (databaseUrl) {
-    const sql = postgres(databaseUrl, { max: 1, prepare: false });
-    try {
-      const rows = await sql<Subscriber[]>`select email, source, created_at as "createdAt" from subscribers order by created_at desc`;
-      return rows;
-    } finally {
-      await sql.end();
-    }
-  }
   try {
     return JSON.parse(await fs.readFile(path.join(process.cwd(), ".data", "subscribers.json"), "utf8"));
   } catch {

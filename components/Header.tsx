@@ -18,7 +18,7 @@ export function Header() {
       </nav>
       <div className="navActions">
         <Link href="/search" className="iconButton" aria-label="Search"><SearchIcon /></Link>
-        <a href="/#subscribe" className="button buttonSmall">Join free</a>
+        <Link href="/#subscribe" className="button buttonSmall">Join free</Link>
         <button className="iconButton menuButton" onClick={() => setOpen((v) => !v)} aria-label="Toggle menu"><MenuIcon /></button>
       </div>
     </div>

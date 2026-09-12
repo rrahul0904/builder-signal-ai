@@ -10,7 +10,8 @@ export function SponsorForm() {
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setState("loading");
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const payload = Object.fromEntries(form.entries());
     try {
       const response = await fetch("/api/sponsor-leads", {
@@ -22,7 +23,7 @@ export function SponsorForm() {
       if (!response.ok) throw new Error(data.error || "Could not submit request");
       setState("success");
       setMessage("Request received. We’ll follow up using the email you provided.");
-      event.currentTarget.reset();
+      formElement.reset();
     } catch (error) {
       setState("error");
       setMessage(error instanceof Error ? error.message : "Could not submit request");

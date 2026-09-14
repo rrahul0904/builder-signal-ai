@@ -17,6 +17,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Refuse stale release candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA"
       - name: Generate deterministic lockfile
         run: npm install --package-lock-only --ignore-scripts
       - name: Commit lockfile

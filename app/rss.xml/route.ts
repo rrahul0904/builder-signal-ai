@@ -1,3 +1,12 @@
 import { articles } from "@/data/content";
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-export function GET(){ const items=articles.map(a=>`<item><title><![CDATA[${a.title}]]></title><link>${siteUrl}/articles/${a.slug}</link><guid>${siteUrl}/articles/${a.slug}</guid><pubDate>${new Date(`${a.publishedAt}T12:00:00Z`).toUTCString()}</pubDate><description><![CDATA[${a.dek}]]></description></item>`).join(""); const xml=`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>BuilderSignal</title><link>${siteUrl}</link><description>AI builder intelligence</description>${items}</channel></rss>`; return new Response(xml,{headers:{"content-type":"application/rss+xml; charset=utf-8"}}); }
+import { siteUrl } from "@/lib/site-url";
+
+export function GET() {
+  const base = siteUrl();
+  const items = articles
+    .map((article) => `<item><title><![CDATA[${article.title}]]></title><link>${base}/articles/${article.slug}</link><guid>${base}/articles/${article.slug}</guid><pubDate>${new Date(`${article.publishedAt}T12:00:00Z`).toUTCString()}</pubDate><description><![CDATA[${article.dek}]]></description></item>`)
+    .join("");
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>BuilderSignal</title><link>${base}</link><description>AI builder intelligence</description>${items}</channel></rss>`;
+
+  return new Response(xml, { headers: { "content-type": "application/rss+xml; charset=utf-8" } });
+}
